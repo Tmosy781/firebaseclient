@@ -1,4 +1,3 @@
-import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import app from "../firebase";
@@ -9,7 +8,9 @@ const Upload = () => {
     const [inputs, setInputs] = useState({});
 
     useEffect(() => {
-        img && uploadFile(img, "imgUrl");
+        if (img) {
+            uploadFile(img, "imgUrl");
+        }
     }, [img]);
 
     const uploadFile = (file, fileType) => {
@@ -53,7 +54,7 @@ const Upload = () => {
                 getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
                     console.log('Download URL:', downloadURL);
                     setInputs((prev) => {
-                        return { ...prev, [fileType]: downloadURL, name: file.name };
+                        return { ...prev, imgUrl: downloadURL, imgName: file.name };
                     });
                 });
             }
@@ -62,11 +63,33 @@ const Upload = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        console.log("Submitting data:", inputs); // Log the inputs to debug
+
+        // Ensure that both imgName and imgUrl are set
+        if (!inputs.imgName || !inputs.imgUrl) {
+            console.error("imgName and imgUrl are required");
+            return;
+        }
+
         try {
-            await axios.post('http://localhost:8082/api/images', { ...inputs });
+            const response = await fetch('http://localhost:8082/api/images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify(inputs),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log("Upload successful:", data);
             window.location.reload();
         } catch (error) {
-            console.log(error);
+            console.log("Error uploading image:", error);
         }
     };
 
